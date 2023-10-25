@@ -1,16 +1,16 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
+#include <bmp280.h>
 #include <esp_err.h>
 #include <string.h>
 
-#include "bmp280.h"
 #include "sesub.h"
-#include "zmod4xxx.h"
 #include "zmod4410_config_iaq2.h"
-#include "../../components/zmod4xxx/HAL/zmod4xxx_hal.h"
-#include "../../components/zmod4xxx/lib/esp32s3/iaq_2nd_gen.h"
-#include "../../components/zmod4xxx/lib/esp32s3/zmod4xxx_cleaning.h"
+#include "zmod4xxx.h"
+#include "../components/zmod4xxx/HAL/zmod4xxx_hal.h"
+#include "../components/zmod4xxx/lib/esp32s3/zmod4xxx_cleaning.h"
+#include "../components/zmod4xxx/lib/esp32s3//iaq_2nd_gen.h"
 
 #define I2C_FREQ_HZ 1000000 // Max 1MHz for esp-idf
 
@@ -23,6 +23,8 @@ static void read_ambient(void *arg);
 int init_zmod4xxx(i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
 {
     int8_t ret;
+    // zmod4xxx_dev_t dev;
+    
 
     /* Sensor specific variables */
     uint8_t zmod4xxx_status;
@@ -102,13 +104,13 @@ int init_zmod4xxx(i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
      * during the modules lifetime and takes 1 minute (blocking).
      */
     printf("Starting cleaning procedure. This might take up to 1 min ...\n");
-    // ret = zmod4xxx_cleaning_run(&dev);
-    // if (ERROR_CLEANING == ret) {
-    //     printf("Skipping cleaning procedure. It has already been performed!\n");
-    // } else if (ret) {
-    //     printf("Error %d during cleaning procedure, exiting program!\n", ret);
-    //     goto exit;
-    // }
+    ret = zmod4xxx_cleaning_run(&dev);
+    if (ERROR_CLEANING == ret) {
+        printf("Skipping cleaning procedure. It has already been performed!\n");
+    } else if (ret) {
+        printf("Error %d during cleaning procedure, exiting program!\n", ret);
+        goto exit;
+    }
 
     /* Determine calibration parameters and configure measurement. */
     ret = zmod4xxx_prepare_sensor(&dev);
@@ -200,7 +202,7 @@ int init_zmod4xxx(i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
         algo_input.humidity_pct = 50.0;
         algo_input.temperature_degc = 20.0;
         
-        // /* Calculate algorithm results. */
+        /* Calculate algorithm results. */
         ret = calc_iaq_2nd_gen(&algo_handle, &dev, &algo_input, &algo_results); 
         
         printf("*********** Measurements ***********\n");
@@ -237,27 +239,19 @@ int init_zmod4xxx(i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
             printf("Unexpected Error during algorithm calculation: Exiting Program.\n");
             goto exit;
         }
+        
     };
 
 exit:
-    // ret = deinit_hardware();
-    // if (ret) {
-    //     printf("Error %d during deinitializing hardware, exiting program!\n",
-    //            ret);
-    //     return ret;
-    // }
+    ret = deinit_hardware();
+    if (ret) {
+        printf("Error %d during deinitializing hardware, exiting program!\n",
+               ret);
+        return ret;
+    }
     return 0;
 }
 
-/*
- * @brief Initialize the sensor subsystem
- *
- *  This function is called by the init_subsystems.
- *
- *  @param c which is sesub_config_t structure, where we can
- *  provide I2C pins, high and low temperatures for the alarm, 
- *  and two callback functions to be called for new readings and alarm cases.
- */
 void sesub_init(sesub_config_t c)
 {
     config = c;
@@ -276,7 +270,6 @@ void sesub_init(sesub_config_t c)
     bmp280_init_desc(&temp_sensor, BMP280_I2C_ADDRESS_0, 0, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl);
     bmp280_init(&temp_sensor, &params);
 }
-
 
 void sesub_start(void) {
     xTaskCreate(read_ambient, "read", 5 * configMINIMAL_STACK_SIZE, NULL, 5, NULL);
@@ -307,8 +300,8 @@ static void read_ambient(void *arg)
         iaq = 1;
         if (config.new_sensor_reading)
         {
-            sensor_reading_t reading = {(int)temperature, (int)humidity, (int)(etoh), (int)(eco2), (int)(tvoc), (int)(iaq)};
-            // sensor_reading_t reading = {(int)temperature, (int)humidity, (int)(presense), (int)(etoh), (int)(eco2), (int)(tvoc), (int)(iaq)};
+            sensor_reading_t reading = {(int)temperature, (int)humidity, //(int)(presense), 
+                (int)(etoh), (int)(eco2), (int)(tvoc), (int)(iaq)};
             config.new_sensor_reading(reading);
         }
     }

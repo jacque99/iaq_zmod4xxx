@@ -12,4 +12,5 @@ typedef struct {
     int iaq;
 } sensor_reading_t;
 
+
 #endif
