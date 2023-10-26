@@ -8,9 +8,9 @@
 #include "sesub.h"
 #include "zmod4410_config_iaq2.h"
 #include "zmod4xxx.h"
-#include "../components/zmod4xxx/HAL/zmod4xxx_hal.h"
-#include "../components/zmod4xxx/lib/esp32s3/zmod4xxx_cleaning.h"
-#include "../components/zmod4xxx/lib/esp32s3//iaq_2nd_gen.h"
+#include "zmod4xxx_hal.h"
+#include "iaq_2nd_gen.h"
+#include "zmod4xxx_cleaning.h"
 
 #define I2C_FREQ_HZ 1000000 // Max 1MHz for esp-idf
 

@@ -3,7 +3,7 @@ idf_build_get_property(idf_target IDF_TARGET)
 idf_component_register(
     # sources to compile
     SRCS src/zmod4xxx.c HAL/zmod4xxx_hal.c
-    INCLUDE_DIRS include HAL
+    INCLUDE_DIRS include HAL lib/esp32s3
     REQUIRES driver i2cdev log
 )
 
