@@ -177,35 +177,35 @@ static void handle_wifi_failed(void)
     ESP_LOGE(TAG, "wifi failed");
 }
 
-static void my_alarm(void)
-{
-    int a = 1;
-    a = a - 1;
-}
+// static void my_alarm(void)
+// {
+//     int a = 1;
+//     a = a - 1;
+// }
 
-void uisub_show(sensor_reading_t data)
-{
-    data.temperature = 25;
-    data.humidity = 80;
-    // data.presense = 1;
+// void uisub_show(sensor_reading_t data)
+// {
+//     data.temperature = 25;
+//     data.humidity = 80;
+//     // data.presense = 1;
 
-    data.temperature++;
-    data.humidity++;
-    // data.presense--;
+//     data.temperature++;
+//     data.humidity++;
+//     // data.presense--;
 
-}
-static void init_subsystems(void)
-{
-    sesub_config_t se_cfg = {
-        .sensor_sda = SENSOR_BUS_SDA,
-        .sensor_scl = SENSOR_BUS_SCL,
-        .temp_high = 30,
-        .temp_low = 10,
-        .new_sensor_reading = uisub_show,
-        .temp_alarm = my_alarm,
-    };
-    sesub_init(se_cfg);
-}
+// }
+// static void init_subsystems(void)
+// {
+//     sesub_config_t se_cfg = {
+//         .sensor_sda = SENSOR_BUS_SDA,
+//         .sensor_scl = SENSOR_BUS_SCL,
+//         .temp_high = 30,
+//         .temp_low = 10,
+//         .new_sensor_reading = uisub_show,
+//         .temp_alarm = my_alarm,
+//     };
+//     sesub_init(se_cfg);
+// }
 
 void app_main(void)
 {
@@ -227,7 +227,7 @@ void app_main(void)
     configure_temperature_sensor();
 
     /* Initialize the sensor subsystems */
-    init_subsystems();
+    // init_subsystems();
 
     /* The app_main function calls appwifi_connect with callbacks.
        It reads Wi-Fi credentials, as indicated in menuconfig.

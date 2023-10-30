@@ -16,7 +16,7 @@ target_link_directories(${COMPONENT_LIB} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lib
 
 # adding a prebuilt library for iaq_2nd_gen
 set(blob iaq_2nd_gen)
-add_prebuilt_library(${blob} "${CMAKE_CURRENT_SOURCE_DIR}/lib/${target_name}/lib_${blob}.a"
+add_prebuilt_library(${blob} "${CMAKE_CURRENT_SOURCE_DIR}/lib/${target_name}/lib1_${blob}.a"
                         REQUIRES ${COMPONENT_NAME})
 
 # This links the ${blob} library to the COMPONENT_LIB

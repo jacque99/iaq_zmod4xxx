@@ -1,4 +1,4 @@
-/* IAQ meter with HS300X and ZMOD4410 sensors
+/* ESP32-S3 Internal Temperature Sensor
    ThingsBoard MQTT SSL Mutual Authentication
 
 */
@@ -25,7 +25,6 @@
 #include "mqtt_client.h"
 #include <cJSON.h>
 
-#include "sesub.h"
 #include "app_temp.h"
 #include "app_wifi.h"
 
@@ -177,36 +176,6 @@ static void handle_wifi_failed(void)
     ESP_LOGE(TAG, "wifi failed");
 }
 
-static void my_alarm(void)
-{
-    int a = 1;
-    a = a - 1;
-}
-
-void uisub_show(sensor_reading_t data)
-{
-    data.temperature = 25;
-    data.humidity = 80;
-    // data.presense = 1;
-
-    data.temperature++;
-    data.humidity++;
-    // data.presense--;
-
-}
-static void init_subsystems(void)
-{
-    sesub_config_t se_cfg = {
-        .sensor_sda = SENSOR_BUS_SDA,
-        .sensor_scl = SENSOR_BUS_SCL,
-        .temp_high = 30,
-        .temp_low = 10,
-        .new_sensor_reading = uisub_show,
-        .temp_alarm = my_alarm,
-    };
-    sesub_init(se_cfg);
-}
-
 void app_main(void)
 {
     ESP_LOGI(TAG, "[APP] Startup..");
@@ -226,15 +195,8 @@ void app_main(void)
     /* Configure the temperature sensor */
     configure_temperature_sensor();
 
-    /* Initialize the sensor subsystems */
-    init_subsystems();
-
-    /* The app_main function calls appwifi_connect with callbacks.
-       It reads Wi-Fi credentials, as indicated in menuconfig.
-     */
-
-   connect_wifi_params_t cbs = {
-        .on_connected = handle_wifi_connect,
-        .on_failed = handle_wifi_failed};
+    connect_wifi_params_t cbs = {
+            .on_connected = handle_wifi_connect,
+            .on_failed = handle_wifi_failed};
     appwifi_connect(cbs);
 }
