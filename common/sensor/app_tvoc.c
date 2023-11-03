@@ -1,23 +1,140 @@
-#include "sesub.h"
-
 #include "zmod4410_config_iaq2.h"
 #include "zmod4xxx.h"
 #include "zmod4xxx_hal.h"
 #include "iaq_2nd_gen.h"
 #include "zmod4xxx_cleaning.h"
 
-int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+#include "i2c_sensors.h" 
+
+int8_t ret;
+iaq_2nd_gen_handle_t algo_handle;
+
+int read_zmod4xxx(zmod4xxx_dev_t *dev)
 {
-    int8_t ret;
-    
     /* Sensor specific variables */
     uint8_t zmod4xxx_status;
-    uint8_t track_number[ZMOD4XXX_LEN_TRACKING];
     uint8_t adc_result[ZMOD4410_ADC_DATA_LEN];
-    uint8_t prod_data[ZMOD4410_PROD_DATA_LEN];
-    iaq_2nd_gen_handle_t algo_handle;
+
     iaq_2nd_gen_results_t algo_results;
     iaq_2nd_gen_inputs_t algo_input;
+
+    /* Start a measurement. */
+    ret = zmod4xxx_start_measurement(dev);
+    if (ret) {
+        printf("Error %d during starting measurement, exiting program!\n",
+                ret);
+        goto exit;
+    }
+    /*
+        * Perform delay. Required to keep proper measurement timing and keep algorithm accuracy.
+        * For more information, read the Programming Manual, section
+        * "Interrupt Usage and Measurement Timing".
+        */
+    dev->delay_ms(ZMOD4410_IAQ2_SAMPLE_TIME);
+
+    /* Verify completion of measurement sequence. */
+    ret = zmod4xxx_read_status(dev, &zmod4xxx_status);
+    if (ret) {
+        printf("Error %d during reading sensor status, exiting program!\n",
+                ret);
+        goto exit;
+    }
+    /* Check if measurement is running. */
+    if (zmod4xxx_status & STATUS_SEQUENCER_RUNNING_MASK) {
+        /*
+            * Check if reset during measurement occured. For more information,
+            * read the Programming Manual, section "Error Codes".
+            */
+        ret = zmod4xxx_check_error_event(dev);
+        switch (ret) {
+        case ERROR_POR_EVENT:
+            printf(
+                "Measurement completion fault. Unexpected sensor reset.\n");
+            break;
+        case ZMOD4XXX_OK:
+            printf(
+                "Measurement completion fault. Wrong sensor setup.\n");
+            break;
+        default:
+            printf("Error during reading status register (%d)\n", ret);
+            break;
+        }
+        goto exit;
+    }
+    /* Read sensor ADC output. */
+    ret = zmod4xxx_read_adc_result(dev, adc_result);
+    if (ret) {
+        printf("Error %d during reading of ADC results, exiting program!\n",
+                ret);
+        goto exit;
+    }
+
+    /*
+        * Check validity of the ADC results. For more information, read the
+        * Programming Manual, section "Error Codes".
+        */
+    ret = zmod4xxx_check_error_event(dev);
+    if (ret) {
+        printf("Error during reading status register (%d)\n", ret);
+        goto exit;
+    }
+    
+    /*
+        * Assign algorithm inputs: raw sensor data and ambient conditions.
+        * Production code should use measured temperature and humidity values.
+        */
+    algo_input.adc_result = adc_result;
+    algo_input.humidity_pct = 50.0;
+    algo_input.temperature_degc = 20.0;
+    
+    /* Calculate algorithm results. */
+    ret = calc_iaq_2nd_gen(&algo_handle, dev, &algo_input, &algo_results); 
+    
+    printf("*********** Measurements ***********\n");
+    for (int i = 0; i < 13; i++) {
+        printf(" Rmox[%d] = ", i);
+        printf("%.3f kOhm\n", algo_results.rmox[i] / 1e3);
+    }
+    printf(" Rcda = %.3f kOhm \n", pow(10, algo_results.log_rcda) / 1e3);
+    printf(" EtOH = %6.3f ppm\n", algo_results.etoh);
+    printf(" TVOC = %6.3f mg/m^3\n", algo_results.tvoc);
+    printf(" eCO2 = %4.0f ppm\n", algo_results.eco2);
+    printf(" IAQ  = %4.1f\n", algo_results.iaq);
+
+    // /* Check validity of the algorithm results. */
+    switch (ret) {
+    case IAQ_2ND_GEN_STABILIZATION:
+        /* The sensor should run for at least 100 cycles to stabilize.
+            * Algorithm results obtained during this period SHOULD NOT be
+            * considered as valid outputs! */
+        printf("Warm-Up!\n");
+        break;
+    case IAQ_2ND_GEN_OK:
+        printf("Valid!\n");
+        break;
+    /*
+    * Notification from Sensor self-check. For more information, read the
+    * Programming Manual, section "Troubleshoot Sensor Damage (Sensor Self-Check)".
+    */
+    case IAQ_2ND_GEN_DAMAGE:
+        printf("Error: Sensor probably damaged. Algorithm results may be incorrect.\n");
+        break;
+    /* Exit program due to unexpected error. */
+    default:
+        printf("Unexpected Error during algorithm calculation: Exiting Program.\n");
+        goto exit;
+    }
+exit:
+    return 0;
+
+}
+
+int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+{
+    
+    /* Sensor specific variables */
+    uint8_t track_number[ZMOD4XXX_LEN_TRACKING];
+    uint8_t prod_data[ZMOD4410_PROD_DATA_LEN];  
 
     /**** TARGET SPECIFIC FUNCTION ****/
     /*
@@ -117,113 +234,7 @@ int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpi
 
     printf("Evaluate measurements in a loop. Press Ctrl-C to quit.\n\n");
     while ( 1 ) {
-        /* Start a measurement. */
-        ret = zmod4xxx_start_measurement(dev);
-        if (ret) {
-            printf("Error %d during starting measurement, exiting program!\n",
-                   ret);
-            goto exit;
-        }
-        /*
-         * Perform delay. Required to keep proper measurement timing and keep algorithm accuracy.
-         * For more information, read the Programming Manual, section
-         * "Interrupt Usage and Measurement Timing".
-         */
-        dev->delay_ms(ZMOD4410_IAQ2_SAMPLE_TIME);
-
-        /* Verify completion of measurement sequence. */
-        ret = zmod4xxx_read_status(dev, &zmod4xxx_status);
-        if (ret) {
-            printf("Error %d during reading sensor status, exiting program!\n",
-                   ret);
-            goto exit;
-        }
-        /* Check if measurement is running. */
-        if (zmod4xxx_status & STATUS_SEQUENCER_RUNNING_MASK) {
-            /*
-             * Check if reset during measurement occured. For more information,
-             * read the Programming Manual, section "Error Codes".
-             */
-            ret = zmod4xxx_check_error_event(dev);
-            switch (ret) {
-            case ERROR_POR_EVENT:
-                printf(
-                    "Measurement completion fault. Unexpected sensor reset.\n");
-                break;
-            case ZMOD4XXX_OK:
-                printf(
-                    "Measurement completion fault. Wrong sensor setup.\n");
-                break;
-            default:
-                printf("Error during reading status register (%d)\n", ret);
-                break;
-            }
-            goto exit;
-        }
-        /* Read sensor ADC output. */
-        ret = zmod4xxx_read_adc_result(dev, adc_result);
-        if (ret) {
-            printf("Error %d during reading of ADC results, exiting program!\n",
-                   ret);
-            goto exit;
-        }
-
-        /*
-         * Check validity of the ADC results. For more information, read the
-         * Programming Manual, section "Error Codes".
-         */
-        ret = zmod4xxx_check_error_event(dev);
-        if (ret) {
-            printf("Error during reading status register (%d)\n", ret);
-            goto exit;
-        }
-        
-        /*
-         * Assign algorithm inputs: raw sensor data and ambient conditions.
-         * Production code should use measured temperature and humidity values.
-         */
-        algo_input.adc_result = adc_result;
-        algo_input.humidity_pct = 50.0;
-        algo_input.temperature_degc = 20.0;
-        
-        /* Calculate algorithm results. */
-        ret = calc_iaq_2nd_gen(&algo_handle, dev, &algo_input, &algo_results); 
-        
-        printf("*********** Measurements ***********\n");
-        for (int i = 0; i < 13; i++) {
-            printf(" Rmox[%d] = ", i);
-            printf("%.3f kOhm\n", algo_results.rmox[i] / 1e3);
-        }
-        printf(" Rcda = %.3f kOhm \n", pow(10, algo_results.log_rcda) / 1e3);
-        printf(" EtOH = %6.3f ppm\n", algo_results.etoh);
-        printf(" TVOC = %6.3f mg/m^3\n", algo_results.tvoc);
-        printf(" eCO2 = %4.0f ppm\n", algo_results.eco2);
-        printf(" IAQ  = %4.1f\n", algo_results.iaq);
-
-        // /* Check validity of the algorithm results. */
-        switch (ret) {
-        case IAQ_2ND_GEN_STABILIZATION:
-            /* The sensor should run for at least 100 cycles to stabilize.
-             * Algorithm results obtained during this period SHOULD NOT be
-             * considered as valid outputs! */
-            printf("Warm-Up!\n");
-            break;
-        case IAQ_2ND_GEN_OK:
-            printf("Valid!\n");
-            break;
-        /*
-        * Notification from Sensor self-check. For more information, read the
-        * Programming Manual, section "Troubleshoot Sensor Damage (Sensor Self-Check)".
-        */
-        case IAQ_2ND_GEN_DAMAGE:
-            printf("Error: Sensor probably damaged. Algorithm results may be incorrect.\n");
-            break;
-        /* Exit program due to unexpected error. */
-        default:
-            printf("Unexpected Error during algorithm calculation: Exiting Program.\n");
-            goto exit;
-        }
-        
+        ret = read_zmod4xxx(dev);
     };
 
 exit:

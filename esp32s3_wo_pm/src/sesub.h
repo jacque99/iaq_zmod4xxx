@@ -4,10 +4,10 @@
 
 #include "common.h"
 
-#define I2C_FREQ_HZ 1000000 // Max 1MHz for esp-idf
-
 typedef void (*sensor_reading_f)(sensor_reading_t);
 typedef void (*temp_alarm_f)(void);
+// temperature and hunidity
+typedef void (*temp_ready_f)(float, float);
 
 typedef struct
 {
@@ -22,6 +22,6 @@ typedef struct
 } sesub_config_t;
 
 void sesub_init(sesub_config_t);
-void sesub_start(void);
+void sesub_start(temp_ready_f cb);
 
 #endif

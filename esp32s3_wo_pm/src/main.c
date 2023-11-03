@@ -26,7 +26,6 @@
 #include <cJSON.h>
 
 #include "sesub.h"
-#include "app_temp.h"
 #include "app_wifi.h"
 
 #define SENSOR_BUS_SDA 21
@@ -45,14 +44,17 @@ static esp_mqtt_client_handle_t client = NULL;
 // static bool enabled = false;
 static int msg_id;
 
-static void publish_reading(int temp, int hum)
+static void publish_reading(float temp, float hum)
 {
     char *json_str;
 
     /* create a json message */
     cJSON *response;
     response = cJSON_CreateObject();
-    cJSON_AddNumberToObject(response, "temperature", temp);
+    char print_num[18];
+    snprintf(print_num, 18, "%.2f", temp);
+    // cJSON_AddRawToObject(jobj, "field_name", print_num);
+    cJSON_AddRawToObject(response, "temperature", print_num);
 
     json_str = cJSON_Print(response);
 
@@ -164,8 +166,7 @@ static void mqtt_app_start(void)
 static void handle_wifi_connect(void)
 {
     mqtt_app_start();
-    apptemp_init(publish_reading);
-    sesub_start();
+    sesub_start(publish_reading);
 }
 
 /*
@@ -224,9 +225,6 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /* Configure the temperature sensor */
-    configure_temperature_sensor();
 
     /* Initialize the sensor subsystems */
     init_subsystems();
