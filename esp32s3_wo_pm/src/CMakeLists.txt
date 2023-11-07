@@ -5,6 +5,6 @@ FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/src/*.*)
 
 idf_component_register(SRCS ${app_sources} )
     
-target_add_binary_data(${COMPONENT_TARGET} "../server/server.pem" TEXT)
-target_add_binary_data(${COMPONENT_TARGET} "../server/cert.pem" TEXT)
-target_add_binary_data(${COMPONENT_TARGET} "../server/key.pem" TEXT)
+target_add_binary_data(${COMPONENT_TARGET} "../certs/server.pem" TEXT)
+target_add_binary_data(${COMPONENT_TARGET} "../certs/cert.pem" TEXT)
+target_add_binary_data(${COMPONENT_TARGET} "../certs/key.pem" TEXT)
