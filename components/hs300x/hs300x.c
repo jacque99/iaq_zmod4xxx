@@ -55,7 +55,7 @@ esp_err_t HS300X_Open(hs300x_ctrl_t *dev, uint8_t addr, i2c_port_t port, gpio_nu
 {
     CHECK_ARG(dev);
 
-    if (addr != HS300X_ADDRESS)
+    if (addr != HS300X_I2C_ADDR)
     {
         ESP_LOGE(TAG, "Invalid I2C ADDRESS");
         return ESP_ERR_INVALID_ARG;
@@ -112,9 +112,9 @@ esp_err_t HS300X_MeasurementStart (hs300x_ctrl_t *dev)
 {
 
     dev->buf[0] = 0;
-    // dev->buf[0] = HS300X_I2C_ADDRESS << 1;
+    // dev->buf[0] = HS300X_I2C_ADDR << 1;
     ESP_LOGD(TAG, "Measurement Req=%x", dev->buf[0]);
-    CHECK_LOGE(dev, write_register8(&dev->i2c_dev, HS300X_ADDRESS, dev->buf[0]), "Failed to start ");
+    CHECK_LOGE(dev, write_register8(&dev->i2c_dev, HS300X_I2C_ADDR, dev->buf[0]), "Failed to start ");
 
     return ESP_OK;
 }

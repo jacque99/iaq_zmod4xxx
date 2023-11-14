@@ -1,4 +1,4 @@
-/* ESP32-S3 Internal Temperature Sensor
+/* ESP32-S3 Indoor Air Quality monitoring device
    ThingsBoard MQTT SSL Mutual Authentication
 
 */
@@ -27,9 +27,6 @@
 
 #include "sesub.h"
 #include "app_wifi.h"
-
-#define SENSOR_BUS_SDA 21
-#define SENSOR_BUS_SCL 22
 
 static const char *TAG = "IAQ_STA";
 
