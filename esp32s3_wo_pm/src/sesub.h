@@ -4,6 +4,9 @@
 
 #include "common.h"
 
+#define I2C_MASTER_NUM     I2C_NUM_0
+#define I2C_FREQ_HZ        400000 // Max 1MHz for esp-idf
+
 typedef void (*sensor_reading_f)(sensor_reading_t);
 typedef void (*temp_alarm_f)(void);
 // temperature and hunidity

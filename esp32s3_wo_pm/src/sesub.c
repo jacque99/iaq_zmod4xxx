@@ -25,13 +25,14 @@ void sesub_init(sesub_config_t c) {
     config = c;
 
     i2cdev_init();
+
     memset(&tvoc_sensor, 0, sizeof(zmod4xxx_dev_t));
     tvoc_sensor.i2c_dev.timeout_ticks = 0xffff / portTICK_PERIOD_MS;
-    init_zmod4xxx(&tvoc_sensor, I2C_NUM_0, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl);
+    init_tvoc_sensor(&tvoc_sensor, I2C_MASTER_NUM, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl, I2C_FREQ_HZ);
 
-    init_hs300x(&temp_sensor, I2C_NUM_0, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl);
     // memset(&temp_sensor, 0, sizeof(bmp280_t));
     // temp_sensor.i2c_dev.timeout_ticks = 0xffff / portTICK_PERIOD_MS;
+    init_temp_sensor(&temp_sensor, I2C_MASTER_NUM, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl, I2C_FREQ_HZ);
 
     // bmp280_params_t params;
     // bmp280_init_default_params(&params);
@@ -86,7 +87,7 @@ static void read_ambient(void *arg)
         {
             ESP_LOGE(TAG, "Could not read data from sensor");
         }
-        ret = read_zmod4xxx(&tvoc_sensor); 
+        ret = read_tvoc_sensor(&tvoc_sensor); 
         if (ret == 0)
         {
             ESP_LOGE(TAG, "Could not read data from TVOC sensor");

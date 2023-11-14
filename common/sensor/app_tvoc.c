@@ -4,12 +4,10 @@
 #include "iaq_2nd_gen.h"
 #include "zmod4xxx_cleaning.h"
 
-#include "i2c_sensors.h" 
-
 int8_t ret;
 iaq_2nd_gen_handle_t algo_handle;
 
-int read_zmod4xxx(zmod4xxx_dev_t *dev)
+int read_tvoc_sensor(zmod4xxx_dev_t *dev)
 {
     /* Sensor specific variables */
     uint8_t zmod4xxx_status;
@@ -129,7 +127,7 @@ exit:
 
 }
 
-int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+int init_tvoc_sensor(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint32_t i2c_freq_hz)
 {
     
     /* Sensor specific variables */
@@ -155,7 +153,7 @@ int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpi
     dev->i2c_dev.cfg.sda_io_num = sda_gpio;
     dev->i2c_dev.cfg.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->i2c_dev.cfg.master.clk_speed = I2C_FREQ_HZ;
+    dev->i2c_dev.cfg.master.clk_speed = i2c_freq_hz;
 #endif
     ret = i2c_dev_create_mutex(&dev->i2c_dev);
     if (ret) {
@@ -234,7 +232,7 @@ int init_zmod4xxx(zmod4xxx_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpi
 
     printf("Evaluate measurements in a loop. Press Ctrl-C to quit.\n\n");
     while ( 1 ) {
-        ret = read_zmod4xxx(dev);
+        ret = read_tvoc_sensor(dev);
     };
 
 exit:
