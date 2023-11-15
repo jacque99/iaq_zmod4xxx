@@ -15,7 +15,7 @@
 #include <esp_err.h>
 #include <i2cdev.h>
 
-#define HS300X_ADDRESS  0x44 // The HS300x series default I2C address is 44HEX
+#define HS300X_I2C_ADDR  0x44 // The HS300x series default I2C address is 44HEX
 
 /** Data type of HS300X */
 typedef enum e_hs300x_data_type

@@ -7,13 +7,14 @@
 #include <math.h>
 
 #include "sesub.h"
-#include "driver/temperature_sensor.h"
-#include "app_temp.h"
+#include "app_temp.h" // FOR TESTING INTERNAL SENSOR
+#include "hs300x.h"
 #include "app_tvoc.h"
 
 #define TAG "app.sensors"
 
-static temperature_sensor_handle_t temp_sensor;
+static temperature_sensor_handle_t internal_temp_sensor; // FOR TESTING INTERNAL SENSOR 
+static hs300x_ctrl_t temp_sensor;
 static zmod4xxx_dev_t tvoc_sensor;
 static sesub_config_t config;
 
@@ -30,15 +31,11 @@ void sesub_init(sesub_config_t c) {
     tvoc_sensor.i2c_dev.timeout_ticks = 0xffff / portTICK_PERIOD_MS;
     init_tvoc_sensor(&tvoc_sensor, I2C_MASTER_NUM, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl, I2C_FREQ_HZ);
 
-    // memset(&temp_sensor, 0, sizeof(bmp280_t));
-    // temp_sensor.i2c_dev.timeout_ticks = 0xffff / portTICK_PERIOD_MS;
-    init_temp_sensor(&temp_sensor, I2C_MASTER_NUM, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl, I2C_FREQ_HZ);
+    init_internal_temp_sensor(&internal_temp_sensor); // FOR TESTING INTERNAL SENSOR 
 
-    // bmp280_params_t params;
-    // bmp280_init_default_params(&params);
-
-    // bmp280_init_desc(&temp_sensor, BMP280_I2C_ADDRESS_0, 0, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl);
-    // bmp280_init(&temp_sensor, &params);
+    memset(&temp_sensor, 0, sizeof(hs300x_ctrl_t));
+    temp_sensor.i2c_dev.timeout_ticks = 0xffff / portTICK_PERIOD_MS;
+    HS300X_Open(&temp_sensor, HS300X_I2C_ADDR, I2C_MASTER_NUM, (gpio_num_t)c.sensor_sda, (gpio_num_t)c.sensor_scl, I2C_FREQ_HZ);
 }
 
 double f_round(double dval, int n)
@@ -65,7 +62,7 @@ static void read_ambient(void *arg)
     {
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         humidity = 800;
-        if (temperature_sensor_get_celsius(temp_sensor, &temperature) == ESP_OK)
+        if (temperature_sensor_get_celsius(internal_temp_sensor, &temperature) == ESP_OK)
         {
             humidity /= 10;
             float temp_rounded = f_round(temperature, 2);

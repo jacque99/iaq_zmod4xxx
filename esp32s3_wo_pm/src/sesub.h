@@ -4,8 +4,10 @@
 
 #include "common.h"
 
-#define I2C_MASTER_NUM     I2C_NUM_0
-#define I2C_FREQ_HZ        400000 // Max 1MHz for esp-idf
+#define SENSOR_BUS_SDA      21
+#define SENSOR_BUS_SCL      22
+#define I2C_MASTER_NUM      I2C_NUM_0
+#define I2C_FREQ_HZ         400000 // Max 1MHz for esp-idf
 
 /* Declares a function pointer named sensor_reading_f. 
  * The function pointer points to a function that takes a single argument
