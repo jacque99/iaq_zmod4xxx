@@ -17,7 +17,7 @@ static temperature_sensor_handle_t temp_sensor;
 static zmod4xxx_dev_t tvoc_sensor;
 static sesub_config_t config;
 
-static temp_ready_f temp_cb;
+static ambient_ready_f reading_cb;
 static void read_ambient(void *arg);
 
 void sesub_init(sesub_config_t c) {
@@ -70,16 +70,16 @@ static void read_ambient(void *arg)
             humidity /= 10;
             float temp_rounded = f_round(temperature, 2);
             ESP_LOGI(TAG, "Temperature value %.02f ℃", temp_rounded);
-            if (temp_cb)
+            if (reading_cb)
             {
-                temp_cb(temp_rounded, humidity);
+                reading_cb(temp_rounded, humidity);
             }
 
             if (temperature > config.temp_high || temperature < config.temp_low)
             {
-                if (config.temp_alarm)
+                if (config.ambient_alarm)
                 {
-                    config.temp_alarm();
+                    config.ambient_alarm();
                 }
             }
         }
@@ -107,7 +107,7 @@ static void read_ambient(void *arg)
     }
 }
 
-void sesub_start(temp_ready_f cb) {
-    temp_cb = cb;
+void sesub_start(ambient_ready_f cb) {
+    reading_cb = cb;
     xTaskCreate(read_ambient, "read", 5 * configMINIMAL_STACK_SIZE, NULL, 5, NULL);
 }

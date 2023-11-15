@@ -179,7 +179,7 @@ static void handle_wifi_failed(void)
     ESP_LOGE(TAG, "wifi failed");
 }
 
-static void my_alarm(void)
+static void led_alarm(void)
 {
     int a = 1;
     a = a - 1;
@@ -205,7 +205,7 @@ static void init_subsystems(void)
         .temp_high = 30,
         .temp_low = 10,
         .new_sensor_reading = uisub_show,
-        .temp_alarm = my_alarm, 
+        .ambient_alarm = led_alarm, 
     };
     sesub_init(se_cfg);
 }
