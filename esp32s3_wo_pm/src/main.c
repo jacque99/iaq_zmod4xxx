@@ -26,6 +26,7 @@
 #include <cJSON.h>
 
 #include "sesub.h"
+#include "uisub.h"
 #include "app_wifi.h"
 
 static const char *TAG = "IAQ_STA";
@@ -176,22 +177,16 @@ static void handle_wifi_failed(void)
     ESP_LOGE(TAG, "wifi failed");
 }
 
-static void led_alarm(void)
+static void update_power_man(void)
 {
-    int a = 1;
-    a = a - 1;
+    uint16_t a=1;
+    a++;
+    // pmsub_update(false);
 }
 
-void uisub_show(sensor_reading_t data)
+static void ambient_alarm(rgb_color_t alarm_color)
 {
-    data.temperature = 25;
-    data.humidity = 80;
-    // data.presense = 1;
-
-    data.temperature++;
-    data.humidity++;
-    // data.presense--;
-
+    uisub_ledstrip(alarm_color.red, alarm_color.green, alarm_color.blue);
 }
 
 static void init_subsystems(void)
@@ -199,12 +194,24 @@ static void init_subsystems(void)
     sesub_config_t se_cfg = {
         .sensor_sda = SENSOR_BUS_SDA,
         .sensor_scl = SENSOR_BUS_SCL,
-        .temp_high = 30,
+        .temp_high = 35,
         .temp_low = 10,
         .new_sensor_reading = uisub_show,
-        .ambient_alarm = led_alarm, 
+        .ambient_alarm = ambient_alarm, 
     };
     sesub_init(se_cfg);
+
+    uisub_config_t ui_cfg = {
+        .ledstrip_pin = LEDSTRIP_GPIO,
+        // .button_pin = BUTTON_GPIO,
+        // .buzzer_pin = BUZZER_GPIO,
+
+        .button_pressed = update_power_man,
+
+        // .oled_sda = OLED_SDA,
+        // .oled_scl = OLED_SCL,
+    };
+    uisub_init(ui_cfg);    
 }
 
 void app_main(void)

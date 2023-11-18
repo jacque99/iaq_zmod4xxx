@@ -12,5 +12,11 @@ typedef struct {
     float iaq;
 } sensor_reading_t;
 
+typedef struct
+{
+    uint32_t red;
+    uint32_t green;
+    uint32_t blue;
+} rgb_color_t;
 
 #endif
