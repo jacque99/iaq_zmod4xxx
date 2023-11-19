@@ -21,7 +21,6 @@ static uisub_config_t config;
 static sensor_reading_t last_reading;
 
 static void configure_led(void);
-static void ledstrip(void *arg);
 static void reset_display(void);
 static void beep(void *arg);
 
@@ -70,13 +69,12 @@ void uisub_init(uisub_config_t c)
     reset_display();
 }
 
-static void ledstrip(void *arg)
+void uisub_ledstrip(uint32_t red, uint32_t green, uint32_t blue)
 {
-    rgb_color_t *color = (rgb_color_t *)arg;
     /* If the addressable LED is enabled */
     if (s_led_state) {
         /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-        led_strip_set_pixel(led_strip, 0, color->red, color->green, color->blue);
+        led_strip_set_pixel(led_strip, 0, red, green, blue);
         /* Refresh the strip to send data */
         led_strip_refresh(led_strip);
     } else {
@@ -84,13 +82,6 @@ static void ledstrip(void *arg)
         led_strip_clear(led_strip);
     }
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    vTaskDelete(NULL);
-}
-
-void uisub_ledstrip(uint32_t red, uint32_t green, uint32_t blue)
-{
-    rgb_color_t color = {red, green, blue};
-    xTaskCreate(ledstrip, "ledstrip", 3 * configMINIMAL_STACK_SIZE, (void*)&color, 5, NULL);
 }
 
 void uisub_show(sensor_reading_t data)

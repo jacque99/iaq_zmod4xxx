@@ -102,9 +102,6 @@ static void read_ambient(void *arg)
                 alarm_color.green = 255;
                 alarm_color.blue = 0;
             }
-            ESP_LOGI(TAG, "RED COLOR %" PRIu32 "", alarm_color.red);
-            ESP_LOGI(TAG, "GREEN COLOR %" PRIu32 "", alarm_color.green);
-            ESP_LOGI(TAG, "BLUE COLOR %" PRIu32 "", alarm_color.blue);
             if (config.ambient_alarm)
             {
                 config.ambient_alarm(alarm_color);
