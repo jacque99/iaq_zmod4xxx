@@ -26,6 +26,7 @@
 #include <cJSON.h>
 
 #include "sesub.h"
+#include "uisub.h"
 #include "app_wifi.h"
 
 static const char *TAG = "IAQ_STA";
@@ -38,8 +39,6 @@ extern const uint8_t server_cert_pem_start[] asm("_binary_server_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_server_pem_end");
 
 static esp_mqtt_client_handle_t client = NULL;
-// static bool enabled = false;
-static int msg_id;
 
 static void publish_reading(float temp, float hum)
 {
@@ -57,7 +56,7 @@ static void publish_reading(float temp, float hum)
 
     if (client != NULL)
     {
-        msg_id = esp_mqtt_client_publish(client, "v1/devices/me/telemetry", json_str, 0, 0, 0);
+        int msg_id = esp_mqtt_client_publish(client, "v1/devices/me/telemetry", json_str, 0, 0, 0);
         ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
     }
 }
@@ -84,8 +83,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
     esp_mqtt_event_handle_t event = event_data;
     client = event->client;
-    // esp_mqtt_client_handle_t client = event->client;
-
+    static int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
@@ -149,7 +147,7 @@ static void mqtt_app_start(void)
   };
 
     ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    client = esp_mqtt_client_init(&mqtt_cfg);
     /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
@@ -176,22 +174,16 @@ static void handle_wifi_failed(void)
     ESP_LOGE(TAG, "wifi failed");
 }
 
-static void led_alarm(void)
+static void update_power_man(void)
 {
-    int a = 1;
-    a = a - 1;
+    uint16_t a=1;
+    a++;
+    // pmsub_update(false);
 }
 
-void uisub_show(sensor_reading_t data)
+static void ambient_alarm(rgb_color_t alarm_color)
 {
-    data.temperature = 25;
-    data.humidity = 80;
-    // data.presense = 1;
-
-    data.temperature++;
-    data.humidity++;
-    // data.presense--;
-
+    uisub_ledstrip(alarm_color.red, alarm_color.green, alarm_color.blue);
 }
 
 static void init_subsystems(void)
@@ -199,12 +191,24 @@ static void init_subsystems(void)
     sesub_config_t se_cfg = {
         .sensor_sda = SENSOR_BUS_SDA,
         .sensor_scl = SENSOR_BUS_SCL,
-        .temp_high = 30,
+        .temp_high = 35,
         .temp_low = 10,
         .new_sensor_reading = uisub_show,
-        .ambient_alarm = led_alarm, 
+        .ambient_alarm = ambient_alarm, 
     };
     sesub_init(se_cfg);
+
+    uisub_config_t ui_cfg = {
+        .ledstrip_pin = LEDSTRIP_GPIO,
+        // .button_pin = BUTTON_GPIO,
+        // .buzzer_pin = BUZZER_GPIO,
+
+        .button_pressed = update_power_man,
+
+        // .oled_sda = OLED_SDA,
+        // .oled_scl = OLED_SCL,
+    };
+    uisub_init(ui_cfg);    
 }
 
 void app_main(void)

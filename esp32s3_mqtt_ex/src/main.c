@@ -25,11 +25,13 @@
 #include "mqtt_client.h"
 #include <cJSON.h>
 
-#include "app_temp.h"
 #include "app_wifi.h"
+#include "driver/temperature_sensor.h"
 
 #define SENSOR_BUS_SDA 21
 #define SENSOR_BUS_SCL 22
+
+typedef void (*ambient_ready_f)(float, float);
 
 static const char *TAG = "IAQ_STA";
 
@@ -44,7 +46,47 @@ static esp_mqtt_client_handle_t client = NULL;
 // static bool enabled = false;
 static int msg_id;
 
-static void publish_reading(int temp, int hum)
+static ambient_ready_f temp_cb;
+static temperature_sensor_handle_t internal_temp_sensor;
+
+void init_internal_temp_sensor(temperature_sensor_handle_t *temp_sensor)
+{
+    ESP_LOGI(TAG, "Install temperature sensor, expected temp ranger range: 10~50 ℃");
+    temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 50);
+    ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, temp_sensor));
+
+    ESP_LOGI(TAG, "Enable temperature sensor");
+    ESP_ERROR_CHECK(temperature_sensor_enable(*temp_sensor));
+}
+
+static void read_temp(void *arg)
+{
+    int16_t humidity, temperature;
+    float tsens_value;
+
+    while (1)
+    {
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        humidity = 1000;
+        if (temperature_sensor_get_celsius(internal_temp_sensor, &tsens_value) == ESP_OK)
+        {
+            humidity /= 10;
+            temperature = (int16_t)tsens_value;
+            // ESP_LOGI(TAG, "Temperature value %.02f ℃", tsens_value);
+            ESP_LOGI(TAG, "Temperature is: %d ℃", temperature);
+            if (temp_cb)
+            {
+                temp_cb(temperature, humidity);
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Could not read data from sensor");
+        }
+    }
+}
+
+static void publish_reading(float temp, float hum)
 {
     char *json_str;
 
@@ -60,6 +102,12 @@ static void publish_reading(int temp, int hum)
         msg_id = esp_mqtt_client_publish(client, "v1/devices/me/telemetry", json_str, 0, 0, 0);
         ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
     }
+}
+
+void apptemp_init(ambient_ready_f cb)
+{
+    temp_cb = cb;
+    xTaskCreate(read_temp, TAG, 3 * configMINIMAL_STACK_SIZE, NULL, 5, NULL);
 }
 
 static void log_error_if_nonzero(const char *message, int error_code)
@@ -192,8 +240,8 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    /* Configure the temperature sensor */
-    configure_temperature_sensor();
+    /* Initialize the temperature sensor */
+    init_internal_temp_sensor(&internal_temp_sensor);
 
     connect_wifi_params_t cbs = {
             .on_connected = handle_wifi_connect,
